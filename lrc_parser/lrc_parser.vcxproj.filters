@@ -21,12 +21,18 @@
     <ClInclude Include="lrc_time.h">
       <Filter>Header Files</Filter>
     </ClInclude>
+    <ClInclude Include="time_tagged_string.h">
+      <Filter>Header Files</Filter>
+    </ClInclude>
   </ItemGroup>
   <ItemGroup>
     <ClCompile Include="lrc_parser.cc">
       <Filter>Source Files</Filter>
     </ClCompile>
     <ClCompile Include="lrc_time.cc">
+      <Filter>Source Files</Filter>
+    </ClCompile>
+    <ClCompile Include="time_tagged_string.cc">
       <Filter>Source Files</Filter>
     </ClCompile>
   </ItemGroup>

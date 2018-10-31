@@ -4,7 +4,8 @@
 
 #include<array>
 #include<string>
-#include<map>
+#include<set>
+#include"time_tagged_string.h"
 
 namespace LRC {
 #if defined _MSC_VER
@@ -17,6 +18,7 @@ namespace LRC {
 #define LRCPARSER_API
 #endif
 
+
 	class LRCPARSER_API LRC_Parser {
 	public:
 		LRC_Parser() {}
@@ -26,7 +28,7 @@ namespace LRC {
 
 		void resetParser();
 
-		std::string OutputLyric(const double paralleled_line_adjustment = 0, const bool merge_duplicate_lyrics = false) const;
+		std::string OutputLyric(const double paralleled_line_adjustment = 1 - 0.618, const bool merge_duplicate_lyrics = false) const;
 
 	private:
 		enum ID_Tags {
@@ -43,9 +45,8 @@ namespace LRC {
 			time_info	// [mm:ss.xx] lrc time
 		};
 		ID_Tags getIDTags(const std::string &);
-		std::map<size_t, std::string> lrc_content_;
-		std::map<size_t, std::string> paralleled_lrc_content_;
-		std::array<std::string, 9> tags_;
+		std::set<TimeTagedString> lrc_content_;
+		std::set<TimeTagedString> paralleled_lrc_content_;
 	};
 }
 

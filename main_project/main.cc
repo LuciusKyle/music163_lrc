@@ -66,8 +66,11 @@ int main(int argc, char const *argv[]) {
 		int a = 0;
 	}
 
-	if (argc < 2) return 1;
-	FILE *fp = fopen(argv[1], "rb");
+	//if (argc < 2) return 1;
+	//FILE *fp = fopen(argv[1], "rb");
+
+
+	FILE *fp = fopen("D:/KuGou/Lyric/abc.lrc", "rb");
 	fseek(fp, 0L, SEEK_END);
 	const size_t file_size = ftell(fp);
 	fseek(fp, 0L, SEEK_SET);
@@ -76,17 +79,18 @@ int main(int argc, char const *argv[]) {
 	fclose(fp);
 
 	std::string str(file_content, file_size);
-	LRC::LRC_Parser parser(str);
+	//LRC::LRC_Parser parser(str);
 
-	str.clear();
+	//str.clear();
 	//for (auto iter = parser.lrc_head_.cbegin(); iter != parser.lrc_head_.cend(); ++iter) {
 	//	str.append(*iter + "\n\n");
 	//}
 	//for (auto iter = parser.lrc_time_line_.cbegin(); iter != parser.lrc_time_line_.cend(); ++iter) {
 	//	str.append(*iter + "ja-jp: " + parser.lrc_content_.at(*iter) + "\n\n" + parser.AdjustTime(*iter, 400) + "zh-cn: \n\n");
 	//}
-
-	std::ofstream file(argv[2]);
+	LRC::LRC_Parser parser(str);
+	str = parser.OutputLyric();
+	std::ofstream file("out.file");
 	file << str;
 
 	return 0;

@@ -5,27 +5,31 @@
 
 #include"lrc_parser.h"
 
-#include<regex>
 #include<assert.h>
+#include<regex>
 
 #include"lrc_time.h"
 
-using std::string;
-using std::regex;
 namespace LRC {
+	using std::string;
+	using std::regex;
 
 	const regex lyric_line_pattern("\\[.*?\\].*?(?=\\r|\\n|\\[)");
 	const regex lyric_time_tag_pattern("\\[[[:digit:]]{2}:[[:digit:]]{2}\\.[[:digit:]]{2}\\]");
 
 	LRC_Parser::LRC_Parser(const string &content) {
-
+		if (!ParseLyrics(content)) {
+			abort();
+		}
 	}
 
 	bool LRC_Parser::ParseLyrics(const string &lyrics_str) {
 		auto pos = lyrics_str.cbegin();
-		auto end = lyrics_str.cend();
+		const auto end = lyrics_str.cend();
 		std::smatch m;
 		LRC_time lrc_time;
+		
+		bool did_lrc_creator_show_up = false;
 		for (; std::regex_search(pos, end, m, lyric_line_pattern); pos = m.suffix().first) {
 			const string &lrc_line = m.str();
 			const size_t pos = lrc_line.find(']') + 1;
@@ -34,45 +38,66 @@ namespace LRC {
 			if (tag < 0) return false;
 			if (tag == ID_Tags::time_info) {
 				lrc_time.setTime(preceding_str);
-				if (!lrc_content_.insert({ lrc_time.getMilliSeconds(), { lrc_line.cbegin() + pos, lrc_line.cend() } }).second) {
-					paralleled_lrc_content_.insert({ lrc_time.getMilliSeconds(), { lrc_line.cbegin() + pos, lrc_line.cend() } }); // It's not necessary to deal with three paralleled line.
+				const string lyric(lrc_line.cbegin() + pos, lrc_line.cend());
+				if (!lrc_content_.emplace(tag, lrc_time.getMilliSeconds(), lyric.c_str(), static_cast<int>(lyric.size())).second) {
+					paralleled_lrc_content_.emplace(tag, lrc_time.getMilliSeconds(), lyric.c_str(), static_cast<int>(lyric.size())); // It's not necessary to deal with three paralleled line.
 				}
 				continue;
-			}			
-			tags_[tag] = preceding_str;
+			}
+			lrc_content_.emplace(tag, 0, preceding_str.c_str(), static_cast<int>(preceding_str.size()));
+			if (tag == ID_Tags::by) did_lrc_creator_show_up = true;
 		}
+		if (!did_lrc_creator_show_up)
+			lrc_content_.emplace(ID_Tags::by, 0, "[by:Lucius Kyle(LuciusKyle@outlook.com)");
 		return true;
 	}
 
 	void LRC_Parser::resetParser() {
 		lrc_content_.clear();
 		paralleled_lrc_content_.clear();
-		for (auto &str : tags_) str.clear();
 	}
 
 	string LRC_Parser::OutputLyric(const double paralleled_line_adjustment, const bool merge_duplicate_lyrics) const {
-		auto lrc_content_copy = lrc_content_;
+		TimeTagedString head;
+
+		TimeTagedString *ptr = &head;
+		for (auto iter = lrc_content_.cbegin(); iter != lrc_content_.cend(); ++iter) {
+			ptr->addNext(new TimeTagedString(iter->get_ID(), iter->getMillisecond(), iter->getContent()));
+			ptr = ptr->Next();
+		}
+
+		ptr = &head;
 		for (auto iter = paralleled_lrc_content_.cbegin(); iter != paralleled_lrc_content_.cend(); ++iter) {
-			auto iter2 = lrc_content_copy.find(iter->first);
-			assert(iter2 != lrc_content_copy.end());
-			const size_t cur_line_time = iter2->first;
-			++iter2;
-			const size_t next_line_time = iter2 == lrc_content_copy.end() ? cur_line_time + 1000 : iter2->first;
-			auto insertion_result = lrc_content_copy.insert({ cur_line_time + static_cast<size_t>((next_line_time - cur_line_time)*paralleled_line_adjustment), iter->second });
-			assert(insertion_result.second);
+			while (ptr != nullptr) {
+				if (ptr->getMillisecond() == iter->getMillisecond()) {
+					const size_t cur_millisecond = ptr->getMillisecond();
+					TimeTagedString *next_ptr = ptr->Next();
+					ptr->addNext(new TimeTagedString(iter->get_ID(), cur_millisecond + (ptr->Next() == nullptr ? cur_millisecond + 1000 : ptr->Next()->getMillisecond() - cur_millisecond) * paralleled_line_adjustment, iter->getContent()));
+					ptr->Next()->addNext(next_ptr);
+					break;
+				}
+				ptr = ptr->Next();
+			}
 		}
 		string rtn;
-		for (size_t i = 0; i < tags_.size(); ++i)
-			if (i != ID_Tags::by)
-				rtn.append(tags_[i] + "\n");
-			else
-				rtn.append("[by:Lucius Kyle]");
-
+		ptr = head.Next();
 		LRC_time lrc_time;
-		for (auto iter = lrc_content_copy.cbegin(); iter != lrc_content_copy.cend(); ++iter) {
-			lrc_time.setTime(iter->first);
-			rtn.append(lrc_time.getStringTime() + iter->second + '\n');
+		while (ptr != nullptr) {
+			if (ptr->get_ID() < ID_Tags::time_info)
+				if (ptr->get_ID() == ID_Tags::by)
+					rtn.append("[by:Lucius Kyle(LuciusKyle@outlook.com)]\n"); // hahaha, Happy!
+				else {
+					rtn.append(ptr->getContent());
+					rtn.append("\n");
+				}
+			else
+				rtn.append(lrc_time.getStringTime(ptr->getMillisecond()) + ptr->getContent() + "\n");
+
+			auto cur_ptr = ptr;
+			ptr = ptr->Next();
+			delete cur_ptr;
 		}
+
 		return rtn;
 	}
 
@@ -99,6 +124,7 @@ namespace LRC {
 			return ID_Tags::time_info;
 		return error_tag;
 	}
+
 
 
 }
