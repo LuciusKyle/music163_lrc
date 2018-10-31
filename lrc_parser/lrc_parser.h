@@ -2,9 +2,9 @@
 #ifndef _LRC_LRC_PARSER_H_
 #define _LRC_LRC_PARSER_H_
 
+#include<array>
 #include<string>
-#include<list>
-#include<unordered_map>
+#include<map>
 
 namespace LRC {
 #if defined _MSC_VER
@@ -14,20 +14,23 @@ namespace LRC {
 #define LRCPARSER_API __declspec(dllimport)
 #endif // LRCPARSER_EXPORTS
 #elif defined __GNUC__
-	#define LRCPARSER_API
+#define LRCPARSER_API
 #endif
 
 	class LRCPARSER_API LRC_Parser {
 	public:
 		LRC_Parser() {}
 		LRC_Parser(const std::string &);
-		
+
 		bool ParseLyrics(const std::string &);
-	private:
-		std::string AdjustTime(const std::string &, const int miliseconds) const;
-		
+
+		void resetParser();
+
+		std::string OutputLyric(const double paralleled_line_adjustment = 0, const bool merge_duplicate_lyrics = false) const;
+
 	private:
 		enum ID_Tags {
+			error_tag = -1,
 			ar,			// Lyrics artist
 			al,			// Album where the song is from
 			ti,			// Lyrics(song) title
@@ -39,11 +42,10 @@ namespace LRC {
 			ve,			// version of program
 			time_info	// [mm:ss.xx] lrc time
 		};
-	public:
-		std::list<std::string> lrc_head_;
-		std::list<std::string> lrc_time_line_;
-		std::unordered_map<std::string, std::string> lrc_content_;
-
+		ID_Tags getIDTags(const std::string &);
+		std::map<size_t, std::string> lrc_content_;
+		std::map<size_t, std::string> paralleled_lrc_content_;
+		std::array<std::string, 9> tags_;
 	};
 }
 
