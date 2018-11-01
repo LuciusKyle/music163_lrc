@@ -1,26 +1,36 @@
 
 #if defined _MSC_VER && 1600 < _MSC_VER
+
 #define _CRT_SECURE_NO_WARNINGS
+#define _SILENCE_CXX17_ALLOCATOR_VOID_DEPRECATION_WARNING
+
 #endif
 
 #include<regex>
 #include<fstream>
 #include<iostream>
+#include<boost/asio.hpp>
+#include<boost/beast.hpp>
 #include"../lrc_parser/lrc_parser.h"
+#include"../music163_web_parser/music163_web_parser.h"
 
 #ifdef _MSC_VER
 
 #ifdef _WIN64
 #ifdef _DEBUG
 #pragma comment(lib, "../x64/Debug/lrc_parser.lib")
+#pragma comment(lib, "../x64/Debug/music163_web_parser.lib")
 #else // _DEBUG
 #pragma comment(lib, "../x64/Release/lrc_parser.lib")
+#pragma comment(lib, "../x64/Release/music163_web_parser.lib")
 #endif // _DEBUG
 #else // _WIN64
 #ifdef _DEBUG
 #pragma comment(lib, "../Debug/lrc_parser.lib")
+#pragma comment(lib, "../Debug/music163_web_parser.lib")
 #else
 #pragma comment(lib, "../Release/lrc_parser.lib")
+#pragma comment(lib, "../Release/music163_web_parser.lib")
 #endif // _DEBUG
 #endif // _WIN64
 
@@ -28,70 +38,40 @@
 
 using std::string;
 using std::regex;
-
-#define SOMEWHAT
-class SOMEWHAT SomeClass {
-public:
-	int a;
-	double b;
-};
+using boost::asio::ip::tcp;
 
 int main(int argc, char const *argv[]) {
+	const int version = 11;
+	const string host = "music.163.com";
+	const string port = "80";
+	const string target = "/api/song/lyric?id=186145&lv=1&kv=1&tv=-1";
 
-	size_t test = 10;
-	int test2 = -2;
-	size_t test3 = test + test2;
+	boost::asio::io_context ioc;
+	tcp::resolver resolver{ ioc };
+	tcp::socket socket{ ioc };
 
-	char test4[12];
-	_itoa(test2, test4, 10);
+	auto const results = resolver.resolve(host, port);
+	boost::asio::connect(socket, results.begin(), results.end());
 
-	const size_t milliseconds_ = 3600;
-	//[00:00.00]
-	const int minutes = milliseconds_ / 1000 / 60;
-	const int seconds = (milliseconds_ / 1000) % 60;
-	const int lrc_milliseconds = (milliseconds_ % 1000) / 10;
-	sprintf(test4, "[%02d:%02d.%02d]", minutes, seconds, lrc_milliseconds);
+	boost::beast::http::request<boost::beast::http::string_body> req{ boost::beast::http::verb::get, target, version };
+	req.set(boost::beast::http::field::host, host);
+	req.set(boost::beast::http::field::user_agent, "Mozilla/5.0 (X11; Linux x86_64; rv:65.0) Gecko/20100101 Firefox/65.0");
+	boost::beast::http::write(socket, req);
 
-	const regex lyric_line_pattern("\\[.*?\\].*?(?=\\r|\\n|\\[)");
-	const regex lyric_time_tag_pattern("\\[[[:digit:]]{2}:[[:digit:]]{2}\\.[[:digit:]]{2}\\]");
-	const regex head_pattern("\\[\.*?\\:\.*?\\](?=\\r|\\n|\\[)");
-	
-	std::smatch match;
-	string test5 = "[00:12.00]\n";
-	if (std::regex_search(test5, match, lyric_line_pattern)) {
-		const string &test6 = match.str();
-		const size_t pos = test6.find(']') + 1;
-		string test7(test6.cbegin(), test6.cbegin() + pos);
-		string test8(test6.cbegin() + pos, test6.cend());
-		int a = 0;
-	}
+	boost::beast::flat_buffer buffer;
 
-	//if (argc < 2) return 1;
-	//FILE *fp = fopen(argv[1], "rb");
+	boost::beast::http::response<boost::beast::http::string_body> res;
 
+	boost::beast::http::read(socket, buffer, res);
 
-	FILE *fp = fopen("D:/KuGou/Lyric/abc.lrc", "rb");
-	fseek(fp, 0L, SEEK_END);
-	const size_t file_size = ftell(fp);
-	fseek(fp, 0L, SEEK_SET);
-	char *file_content = new char[file_size];
-	fread(file_content, 1, file_size, fp);
-	fclose(fp);
-
-	std::string str(file_content, file_size);
-	//LRC::LRC_Parser parser(str);
-
-	//str.clear();
-	//for (auto iter = parser.lrc_head_.cbegin(); iter != parser.lrc_head_.cend(); ++iter) {
-	//	str.append(*iter + "\n\n");
-	//}
-	//for (auto iter = parser.lrc_time_line_.cbegin(); iter != parser.lrc_time_line_.cend(); ++iter) {
-	//	str.append(*iter + "ja-jp: " + parser.lrc_content_.at(*iter) + "\n\n" + parser.AdjustTime(*iter, 400) + "zh-cn: \n\n");
-	//}
-	lrc::LRC_Parser parser(str);
-	str = parser.OutputLyric();
+	lrc::Music163WebParser web_parser;
 	std::ofstream file("out.file");
-	file << str;
+	file << web_parser.Extract_LRC_FromJson(res.body());
+
+
+	boost::system::error_code ec;
+	socket.shutdown(tcp::socket::shutdown_both, ec);
 
 	return 0;
 }
+

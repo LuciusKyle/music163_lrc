@@ -28,7 +28,7 @@ namespace lrc {
 		const auto end = lyrics_str.cend();
 		std::smatch m;
 		LRC_time lrc_time;
-		
+
 		bool did_lrc_creator_show_up = false;
 		for (; std::regex_search(pos, end, m, lyric_line_pattern); pos = m.suffix().first) {
 			const string &lrc_line = m.str();
