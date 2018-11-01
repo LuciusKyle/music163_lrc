@@ -4,7 +4,7 @@
 
 #include<string>
 
-namespace LRC {
+namespace lrc {
 	class LRC_time {
 	public:
 		LRC_time() :milliseconds_(0) {}

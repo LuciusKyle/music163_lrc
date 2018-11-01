@@ -88,7 +88,7 @@ int main(int argc, char const *argv[]) {
 	//for (auto iter = parser.lrc_time_line_.cbegin(); iter != parser.lrc_time_line_.cend(); ++iter) {
 	//	str.append(*iter + "ja-jp: " + parser.lrc_content_.at(*iter) + "\n\n" + parser.AdjustTime(*iter, 400) + "zh-cn: \n\n");
 	//}
-	LRC::LRC_Parser parser(str);
+	lrc::LRC_Parser parser(str);
 	str = parser.OutputLyric();
 	std::ofstream file("out.file");
 	file << str;

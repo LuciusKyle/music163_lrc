@@ -10,7 +10,7 @@
 
 #include"lrc_time.h"
 
-namespace LRC {
+namespace lrc {
 	using std::string;
 	using std::regex;
 

@@ -7,7 +7,7 @@
 #include<set>
 #include"time_tagged_string.h"
 
-namespace LRC {
+namespace lrc {
 #if defined _MSC_VER
 #ifdef LRCPARSER_EXPORTS
 #define LRCPARSER_API __declspec(dllexport)

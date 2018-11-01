@@ -7,7 +7,7 @@
 #include<regex>
 #include<assert.h>
 
-namespace LRC {
+namespace lrc {
 
 	using std::regex;
 	using std::string;
